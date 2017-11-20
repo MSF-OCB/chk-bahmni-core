@@ -71,23 +71,25 @@ public class CSVPatientService {
         return patient;
     }
 
-    private void addPersonAttributes(Patient patient, PatientRow patientRow) throws ParseException  {
+    private void addPersonAttributes(Patient patient, PatientRow patientRow) throws ParseException {
         for (KeyValue attribute : patientRow.attributes) {
-            PersonAttributeType personAttributeType = findAttributeType(attribute.getKey());
-            if (personAttributeType.getFormat().equalsIgnoreCase("org.openmrs.Concept")) {
-                Concept concept = getConceptByName(attribute.getValue());
+            PersonAttributeType personAttributeType = findAttributeType (attribute.getKey ());
+            if (personAttributeType.getFormat ().equalsIgnoreCase ("org.openmrs.Concept")) {
+                Concept concept = getConceptByName (attribute.getValue ());
                 if (concept != null) {
-                    patient.addAttribute(new PersonAttribute(personAttributeType, concept.getId().toString()));
+                    patient.addAttribute (new PersonAttribute (personAttributeType , concept.getId ().toString ()));
                 } else {
-                    throw new RuntimeException("Invalid value for Attribute." + attribute.getKey());
+                    throw new RuntimeException ("Invalid value for Attribute." + attribute.getKey ());
                 }
-            } else if (personAttributeType.getFormat().startsWith("java.lang.")) {
-                patient.addAttribute(new PersonAttribute(findAttributeType(attribute.getKey()), attribute.getValue()));
-           } else if (personAttributeType.getFormat().startsWith("org.openmrs.util.AttributableDate")) {
+            } else if (personAttributeType.getFormat ().startsWith ("java.lang.")) {
+                patient.addAttribute (new PersonAttribute (findAttributeType (attribute.getKey ()) , attribute.getValue ()));
+            } else if (personAttributeType.getFormat ().startsWith ("org.openmrs.util.AttributableDate")) {
                 //Validating the Date format
-                String dateString = attribute.getValue();
-                getDateFromString(dateString);
-                patient.addAttribute(new PersonAttribute(findAttributeType(attribute.getKey()),dateString));
+                String dateString = attribute.getValue ();
+                if (!StringUtils.isBlank (dateString)) {
+                    getDateFromString (dateString);
+                    patient.addAttribute (new PersonAttribute (findAttributeType (attribute.getKey ()) , dateString));
+                }
             }
         }
     }
