@@ -3,9 +3,7 @@ package org.bahmni.module.bahmnicore.web.v1_0.controller;
 import org.bahmni.module.bahmnicore.model.Document;
 import org.bahmni.module.bahmnicore.service.PatientDocumentService;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -13,7 +11,6 @@ import org.mockito.MockitoAnnotations;
 import org.openmrs.Encounter;
 import org.openmrs.Patient;
 import org.openmrs.Visit;
-import org.openmrs.api.APIException;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
@@ -44,9 +41,6 @@ public class VisitDocumentControllerTest {
     BahmniVisitLocationService bahmniVisitLocationService;
     @Mock
     UserContext userContext;
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Before
     public void setUp() throws Exception {
@@ -122,28 +116,6 @@ public class VisitDocumentControllerTest {
         when(Context.getUserContext()).thenReturn(userContext);
         when(userContext.isAuthenticated()).thenReturn(false);
         visitDocumentController.deleteDocument("testFile.png");
-        verifyZeroInteractions(patientDocumentService);
-    }
-
-    @Test
-    public void shouldNotCallDeleteWithGivenFileNameIfFileNameIsNull() throws Exception {
-        PowerMockito.mockStatic(Context.class);
-        when(Context.getUserContext()).thenReturn(userContext);
-        when(userContext.isAuthenticated()).thenReturn(true);
-        expectedException.expect(APIException.class);
-        expectedException.expectMessage("[Required String parameter 'filename' is empty]");
-        visitDocumentController.deleteDocument(null);
-        verifyZeroInteractions(patientDocumentService);
-    }
-
-    @Test
-    public void shouldNotCallDeleteWithGivenFileNameIfFileNameIsEmpty() throws Exception {
-        PowerMockito.mockStatic(Context.class);
-        when(Context.getUserContext()).thenReturn(userContext);
-        when(userContext.isAuthenticated()).thenReturn(true);
-        expectedException.expect(APIException.class);
-        expectedException.expectMessage("[Required String parameter 'filename' is empty]");
-        visitDocumentController.deleteDocument("");
         verifyZeroInteractions(patientDocumentService);
     }
 }

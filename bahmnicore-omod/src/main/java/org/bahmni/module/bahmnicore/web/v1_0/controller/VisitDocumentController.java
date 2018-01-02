@@ -6,7 +6,6 @@ import org.bahmni.module.bahmnicore.service.PatientDocumentService;
 import org.openmrs.Encounter;
 import org.openmrs.Patient;
 import org.openmrs.Visit;
-import org.openmrs.api.APIException;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.bahmniemrapi.document.contract.VisitDocumentRequest;
@@ -67,12 +66,7 @@ public class VisitDocumentController extends BaseRestController {
     @RequestMapping(method = RequestMethod.DELETE, value = baseVisitDocumentUrl)
     @ResponseBody
     public void deleteDocument(@RequestParam(value = "filename") String fileName) {
-        if (Context.getUserContext().isAuthenticated()) {
-            if (StringUtils.isNotEmpty(fileName)) {
-                patientDocumentService.delete(fileName);
-            } else {
-                throw new APIException("[Required String parameter 'filename' is empty]");
-            }
-        }
+        if (Context.getUserContext().isAuthenticated())
+            patientDocumentService.delete(fileName);
     }
 }
