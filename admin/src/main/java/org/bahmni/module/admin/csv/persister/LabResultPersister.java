@@ -2,20 +2,15 @@ package org.bahmni.module.admin.csv.persister;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.bahmni.csv.EntityPersister;
 import org.bahmni.csv.Messages;
 import org.bahmni.module.admin.csv.models.LabResultRow;
 import org.bahmni.module.admin.csv.models.LabResultsRow;
 import org.bahmni.module.admin.csv.service.PatientMatchService;
-import org.openmrs.CareSetting;
-import org.openmrs.ConceptNumeric;
-import org.openmrs.Encounter;
-import org.openmrs.EncounterRole;
-import org.openmrs.Obs;
-import org.openmrs.Order;
-import org.openmrs.Patient;
-import org.openmrs.Provider;
-import org.openmrs.Visit;
+import org.openmrs.*;
 import org.openmrs.api.APIException;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.EncounterService;
@@ -38,6 +33,7 @@ import java.util.HashSet;
 
 @Component
 public class LabResultPersister implements EntityPersister<LabResultsRow> {
+    private static final Log log = LogFactory.getLog(LabResultPersister.class);
     public static final String LAB_RESULT_ENCOUNTER_TYPE = "LAB_RESULT";
     public static final String LAB_ORDER_TYPE = "Lab Order";
     private String patientMatchingAlgorithmClassName;
@@ -83,17 +79,16 @@ public class LabResultPersister implements EntityPersister<LabResultsRow> {
             encounter.addProvider(encounterService.getEncounterRoleByUuid(EncounterRole.UNKNOWN_ENCOUNTER_ROLE_UUID), getProvider());
             HashSet<Obs> resultObservations = new HashSet<>();
             for (LabResultRow labResultRow : labResultsRow.getTestResults()) {
-                labResultRow.getResult();
                 org.openmrs.Concept concept = conceptService.getConceptByName(labResultRow.getTest());
-                if(concept.isNumeric()){
-                    ConceptNumeric cn = (ConceptNumeric)concept;
-                    if(!cn.isAllowDecimal() && labResultRow.getResult().contains(".")){
-                        throw new APIException("Decimal is not allowed for "+ cn.getName() +" concept");
+                if (concept.isNumeric()) {
+                    ConceptNumeric cn = (ConceptNumeric) concept;
+                    if (!cn.isAllowDecimal() && labResultRow.getResult().contains(".")) {
+                        throw new APIException("Decimal is not allowed for " + cn.getName() + " concept");
                     }
                 }
                 Order testOrder = getTestOrder(patient, labResultRow, labResultsRow.getTestDate());
                 encounter.addOrder(testOrder);
-                resultObservations.add(getResultObs(labResultRow, testOrder));
+                resultObservations.add(getResultObs(labResultRow, testOrder, concept));
             }
             visit.addEncounter(encounter);
             Encounter savedEncounter = encounterService.saveEncounter(encounter);
@@ -133,10 +128,18 @@ public class LabResultPersister implements EntityPersister<LabResultsRow> {
         return order;
     }
 
-    private Obs getResultObs(LabResultRow labResultRow, Order testOrder) {
+    private Obs getResultObs(LabResultRow labResultRow, Order testOrder, Concept concept) {
         LabOrderResult labOrderResult = new LabOrderResult();
-        labOrderResult.setResult(labResultRow.getResult());
+        String result = labResultRow.getResult();
+        labOrderResult.setResult(result);
         labOrderResult.setResultDateTime(testOrder.getDateActivated());
+        if (concept.getDatatype().getHl7Abbreviation().equals("CWE")) {
+            Concept resultConcept = conceptService.getConceptByName(result);
+            if (resultConcept != null)
+                labOrderResult.setResultUuid(resultConcept.getUuid());
+            else
+                log.warn(String.format("Concept is not available in OpenMRS for concept name: %s", result));
+        }
         return labOrderResultMapper.map(labOrderResult, testOrder, testOrder.getConcept());
     }
 
