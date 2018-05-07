@@ -10,7 +10,16 @@ import org.bahmni.csv.Messages;
 import org.bahmni.module.admin.csv.models.LabResultRow;
 import org.bahmni.module.admin.csv.models.LabResultsRow;
 import org.bahmni.module.admin.csv.service.PatientMatchService;
-import org.openmrs.*;
+import org.openmrs.CareSetting;
+import org.openmrs.Concept;
+import org.openmrs.ConceptNumeric;
+import org.openmrs.Encounter;
+import org.openmrs.EncounterRole;
+import org.openmrs.Obs;
+import org.openmrs.Order;
+import org.openmrs.Patient;
+import org.openmrs.Provider;
+import org.openmrs.Visit;
 import org.openmrs.api.APIException;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.EncounterService;
@@ -88,7 +97,7 @@ public class LabResultPersister implements EntityPersister<LabResultsRow> {
                 }
                 Order testOrder = getTestOrder(patient, labResultRow, labResultsRow.getTestDate());
                 encounter.addOrder(testOrder);
-                resultObservations.add(getResultObs(labResultRow, testOrder, concept));
+                resultObservations.add(getResultObs(labResultRow.getResult(), testOrder, concept));
             }
             visit.addEncounter(encounter);
             Encounter savedEncounter = encounterService.saveEncounter(encounter);
@@ -128,17 +137,16 @@ public class LabResultPersister implements EntityPersister<LabResultsRow> {
         return order;
     }
 
-    private Obs getResultObs(LabResultRow labResultRow, Order testOrder, Concept concept) {
+    private Obs getResultObs(String labResult, Order testOrder, Concept concept) {
         LabOrderResult labOrderResult = new LabOrderResult();
-        String result = labResultRow.getResult();
-        labOrderResult.setResult(result);
+        labOrderResult.setResult(labResult);
         labOrderResult.setResultDateTime(testOrder.getDateActivated());
-        if (concept.getDatatype().getHl7Abbreviation().equals("CWE")) {
-            Concept resultConcept = conceptService.getConceptByName(result);
+        if (concept.getDatatype().getHl7Abbreviation().equals(org.openmrs.ConceptDatatype.CODED)) {
+            Concept resultConcept = conceptService.getConceptByName(labResult);
             if (resultConcept != null)
                 labOrderResult.setResultUuid(resultConcept.getUuid());
             else
-                log.warn(String.format("Concept is not available in OpenMRS for concept name: %s", result));
+                log.warn(String.format("Concept is not available in OpenMRS for concept name: %s", labResult));
         }
         return labOrderResultMapper.map(labOrderResult, testOrder, testOrder.getConcept());
     }
