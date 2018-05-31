@@ -7,11 +7,21 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.internal.util.collections.Sets;
-import org.openmrs.*;
+import org.openmrs.Concept;
+import org.openmrs.ConceptDatatype;
+import org.openmrs.ConceptName;
+import org.openmrs.Location;
+import org.openmrs.Patient;
+import org.openmrs.PatientIdentifier;
+import org.openmrs.PatientIdentifierType;
+import org.openmrs.PersonAddress;
+import org.openmrs.PersonAttribute;
+import org.openmrs.PersonAttributeType;
+import org.openmrs.Visit;
+import org.openmrs.api.ConceptService;
 import org.openmrs.api.VisitService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.bahmniemrapi.visitlocation.BahmniVisitLocationServiceImpl;
-import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -20,6 +30,8 @@ import java.util.Date;
 import java.util.List;
 
 import static org.mockito.Matchers.any;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(Context.class)
@@ -33,21 +45,34 @@ public class PatientResponseMapperTest {
     @Mock
     BahmniVisitLocationServiceImpl bahmniVisitLocationService;
 
+    @Mock
+    private ConceptService conceptService;
+
+    @Mock
+    private Concept concept;
+
+    @Mock
+    private ConceptDatatype conceptDatatype;
+
+    @Mock
+    private ConceptName conceptName;
+
     Patient patient;
 
     @Before
     public void setUp() throws Exception {
         patient = new Patient();
         Location location = new Location(1);
-        PowerMockito.mockStatic(Context.class);
+        mockStatic(Context.class);
         Visit visit = new Visit(1);
         visit.setUuid("someLocationUUid");
         visit.setLocation(location);
         List<Visit> visits = new ArrayList<>();
         visits.add(visit);
-        PowerMockito.when(visitService.getActiveVisitsByPatient(patient)).thenReturn(visits);
-        PowerMockito.when(Context.getVisitService()).thenReturn(visitService);
-        PowerMockito.when(bahmniVisitLocationService.getVisitLocation(any(String.class))).thenReturn(location);
+        when(visitService.getActiveVisitsByPatient(patient)).thenReturn(visits);
+        when(Context.getVisitService()).thenReturn(visitService);
+        when(bahmniVisitLocationService.getVisitLocation(any(String.class))).thenReturn(location);
+        when(Context.getConceptService()).thenReturn(conceptService);
 
         patientResponseMapper = new PatientResponseMapper(Context.getVisitService(), bahmniVisitLocationService);
         patient.setPatientId(12);
@@ -75,6 +100,7 @@ public class PatientResponseMapperTest {
 
     @Test
     public void shouldMapPersonAttributes() throws Exception {
+        when(conceptService.getConceptByName("givenNameLocal")).thenReturn(null);
         PersonAttributeType personAttributeType = new PersonAttributeType();
         personAttributeType.setName("givenNameLocal");
         patient.setAttributes(Sets.newSet(new PersonAttribute(personAttributeType,"someName")));
@@ -86,6 +112,7 @@ public class PatientResponseMapperTest {
 
     @Test
     public void shouldAddSlashToSupportSpecialCharactersInJSON() throws Exception {
+        when(conceptService.getConceptByName("familyNameLocal")).thenReturn(null);
         PersonAttributeType personAttributeType = new PersonAttributeType();
         personAttributeType.setName("familyNameLocal");
         patient.setAttributes(Sets.newSet(new PersonAttribute(personAttributeType,"so\"me\\Name")));
@@ -93,6 +120,23 @@ public class PatientResponseMapperTest {
         PatientResponse patientResponse = patientResponseMapper.map(patient, null, patientResultFields, null, null);
 
         Assert.assertEquals(patientResponse.getCustomAttribute(),"{\"familyNameLocal\" : \"so\\\"me\\\\Name\"}");
+    }
+
+    @Test
+    public void shouldReturnAnswerValueForCodedPersonAttributes() {
+        when(conceptService.getConceptByName("Education Details")).thenReturn(concept);
+        when(concept.getDatatype()).thenReturn(conceptDatatype);
+        when(conceptDatatype.getName()).thenReturn("Coded");
+        when(conceptService.getConcept(412)).thenReturn(concept);
+        when(concept.getName()).thenReturn(conceptName);
+        when(conceptName.getName()).thenReturn("10th pass");
+        PersonAttributeType personAttributeType = new PersonAttributeType();
+        personAttributeType.setName("Education Details");
+        patient.setAttributes(Sets.newSet(new PersonAttribute(personAttributeType,"412")));
+        String[] patientResultFields = {"Education Details"};
+        PatientResponse patientResponse = patientResponseMapper.map(patient, null, patientResultFields, null, null);
+
+        Assert.assertEquals("{\"Education Details\" : \"10th pass\"}", patientResponse.getCustomAttribute());
     }
 
     @Test

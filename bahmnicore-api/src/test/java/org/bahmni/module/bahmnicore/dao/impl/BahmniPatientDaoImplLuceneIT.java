@@ -7,7 +7,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.openmrs.Patient;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -132,6 +131,21 @@ public class BahmniPatientDaoImplLuceneIT extends BaseIntegrationTest {
         assertEquals(1, patients.size());
         PatientResponse patient200002 = patients.get(0);
         assertTrue("{\"middleNameLocal\" : \"singh\",\"familyNameLocal\" : \"gond\",\"givenNameLocal\" : \"ram\"}".equals(patient200002.getCustomAttribute()));
+        assertTrue("{\"address3\" : \"Dindori\"}".equals(patient200002.getAddressFieldValue()));
+    }
+
+    @Test
+    public void shouldReturnAnswerValueForPatientCodedAttributes() throws Exception{
+        String[] addressResultFields = {"address3"};
+        String[] patientResultFields = {"Education Details"};
+        List<PatientResponse> patients = patientDao.getPatientsUsingLuceneSearch("GAN200002", null,
+                null, null, null, 100, 0,
+                new String[]{"caste","givenNameLocal"},null,null
+                ,addressResultFields,patientResultFields, "c36006e5-9fbb-4f20-866b-0ece245615a1",
+                false, false);
+        assertEquals(1, patients.size());
+        PatientResponse patient200002 = patients.get(0);
+        assertTrue("{\"Education Details\" : \"10th pass\"}".equals(patient200002.getCustomAttribute()));
         assertTrue("{\"address3\" : \"Dindori\"}".equals(patient200002.getAddressFieldValue()));
     }
     

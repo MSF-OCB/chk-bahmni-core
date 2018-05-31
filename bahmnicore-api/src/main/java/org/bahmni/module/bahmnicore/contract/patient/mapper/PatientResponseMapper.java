@@ -1,9 +1,9 @@
 package org.bahmni.module.bahmnicore.contract.patient.mapper;
 
-import java.util.Objects;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bahmni.module.bahmnicore.contract.patient.response.PatientResponse;
+import org.openmrs.Concept;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PersonAddress;
@@ -12,6 +12,7 @@ import org.openmrs.Visit;
 import org.openmrs.VisitAttribute;
 import org.openmrs.api.APIException;
 import org.openmrs.api.VisitService;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.bahmniemrapi.encountertransaction.command.impl.BahmniVisitAttributeService;
 import org.openmrs.module.bahmniemrapi.visitlocation.BahmniVisitLocationServiceImpl;
 
@@ -19,10 +20,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class PatientResponseMapper {
+    private static final String CODED = "Coded";
     private PatientResponse patientResponse;
     private VisitService visitService;
     private BahmniVisitLocationServiceImpl bahmniVisitLocationService;
@@ -80,10 +83,18 @@ public class PatientResponseMapper {
         String queriedPersonAttributes = patientSearchResultFields.stream()
                 .map(attributeName -> {
                     PersonAttribute attribute = patient.getAttribute(attributeName);
-                    return attribute == null ? null : formKeyPair(attributeName, attribute.getValue());
+                    return attribute == null ? null : formKeyPair(attributeName, getAttributeValue(attribute.getValue(), attributeName));
                 }).filter(Objects::nonNull)
                 .collect(Collectors.joining(","));
         patientResponse.setCustomAttribute(formJsonString(queriedPersonAttributes));
+    }
+
+    private String getAttributeValue(String value, String attributeName) {
+        Concept concept = Context.getConceptService().getConceptByName(attributeName);
+
+        return concept != null && CODED.equals(concept.getDatatype().getName()) ?
+                Context.getConceptService().getConcept(new Integer(value)).getName().getName()
+                : value;
     }
 
     private void mapPersonAddress(Patient patient, List<String> addressSearchResultFields) {
