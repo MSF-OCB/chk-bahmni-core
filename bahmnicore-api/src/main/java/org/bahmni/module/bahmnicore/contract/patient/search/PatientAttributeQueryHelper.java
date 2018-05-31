@@ -37,7 +37,7 @@ public class PatientAttributeQueryHelper {
 				join +=
 				" LEFT OUTER JOIN person_attribute pattr_results on pattr_results.person_id = p.person_id and pattr_results.person_attribute_type_id in ("+ StringUtils.join(personAttributeResultsIds, ',')+") " +
 				" LEFT OUTER JOIN person_attribute_type attrt_results on attrt_results.person_attribute_type_id = pattr_results.person_attribute_type_id" +
-				" LEFT OUTER JOIN concept_name cn on cn.concept_id = pattr_results.value AND cn.concept_name_type = 'FULLY_SPECIFIED'";
+				" LEFT OUTER JOIN concept_name cn on cast(cn.concept_id AS char) = pattr_results.value AND cn.concept_name_type = 'FULLY_SPECIFIED'";
 		    return join;
 	}
 
