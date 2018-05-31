@@ -25,7 +25,7 @@ public class PatientAttributeQueryHelper {
 
 		if(personAttributeResultsIds.size() > 0)
 			selectClause =
-		"concat('{',group_concat(DISTINCT (coalesce(concat('\"',attrt_results.name,'\":\"', REPLACE(REPLACE(pattr_results.value,'\\\\','\\\\\\\\'),'\"','\\\\\"'),'\"'))) SEPARATOR ','),'}')";
+		"concat('{',group_concat(DISTINCT (coalesce(concat('\"',attrt_results.name,'\":\"', REPLACE(REPLACE(coalesce(cn.name, pattr_results.value),'\\\\','\\\\\\\\'),'\"','\\\\\"'),'\"'))) SEPARATOR ','),'}')";
 
 		return String.format("%s,%s as customAttribute", select, selectClause);
 	}
@@ -36,7 +36,8 @@ public class PatientAttributeQueryHelper {
 		    if(personAttributeResultsIds.size() > 0)
 				join +=
 				" LEFT OUTER JOIN person_attribute pattr_results on pattr_results.person_id = p.person_id and pattr_results.person_attribute_type_id in ("+ StringUtils.join(personAttributeResultsIds, ',')+") " +
-				" LEFT OUTER JOIN person_attribute_type attrt_results on attrt_results.person_attribute_type_id = pattr_results.person_attribute_type_id";
+				" LEFT OUTER JOIN person_attribute_type attrt_results on attrt_results.person_attribute_type_id = pattr_results.person_attribute_type_id" +
+				" LEFT OUTER JOIN concept_name cn on cn.concept_id = pattr_results.value AND cn.concept_name_type = 'FULLY_SPECIFIED'";
 		    return join;
 	}
 
